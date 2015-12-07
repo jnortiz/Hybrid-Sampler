@@ -24,7 +24,7 @@ CLEAN_SUBPROJECTS=${CLEAN_SUBPROJECTS_${SUBPROJECTS}}
 
 
 # Project Name
-PROJECTNAME=NTRU-Lattices
+PROJECTNAME=Hybrid-Sampler
 
 # Active Configuration
 DEFAULTCONF=Debug

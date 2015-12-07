@@ -62,11 +62,11 @@ LDLIBSOPTIONS=
 
 # Build Targets
 .build-conf: ${BUILD_SUBPROJECTS}
-	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ntru-lattices
+	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/hybrid-sampler
 
-${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ntru-lattices: ${OBJECTFILES}
+${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/hybrid-sampler: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
-	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ntru-lattices ${OBJECTFILES} ${LDLIBSOPTIONS} -lntl -lgmp -lm
+	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/hybrid-sampler ${OBJECTFILES} ${LDLIBSOPTIONS} -lntl -lgmp -lm
 
 ${OBJECTDIR}/Algebra.o: Algebra.cc 
 	${MKDIR} -p ${OBJECTDIR}
@@ -109,7 +109,7 @@ ${OBJECTDIR}/main.o: main.cpp
 # Clean Targets
 .clean-conf: ${CLEAN_SUBPROJECTS}
 	${RM} -r ${CND_BUILDDIR}/${CND_CONF}
-	${RM} ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ntru-lattices
+	${RM} ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/hybrid-sampler
 
 # Subprojects
 .clean-subprojects:

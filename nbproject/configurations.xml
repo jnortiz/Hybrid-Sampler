@@ -108,6 +108,7 @@
         </cTool>
         <ccTool>
           <developmentMode>5</developmentMode>
+          <commandLine>-Wall -std=gnu++0x -Ofast -g</commandLine>
         </ccTool>
         <fortranCompilerTool>
           <developmentMode>5</developmentMode>
@@ -115,6 +116,9 @@
         <asmTool>
           <developmentMode>5</developmentMode>
         </asmTool>
+        <linkerTool>
+          <commandLine>-lntl -lgmp -lm</commandLine>
+        </linkerTool>
       </compileType>
       <item path="Algebra.cc" ex="false" tool="1" flavor2="0">
       </item>

@@ -9,19 +9,19 @@ CND_DISTDIR=dist
 # Debug configuration
 CND_PLATFORM_Debug=GNU-Linux-x86
 CND_ARTIFACT_DIR_Debug=dist/Debug/GNU-Linux-x86
-CND_ARTIFACT_NAME_Debug=ntru-lattices
-CND_ARTIFACT_PATH_Debug=dist/Debug/GNU-Linux-x86/ntru-lattices
+CND_ARTIFACT_NAME_Debug=hybrid-sampler
+CND_ARTIFACT_PATH_Debug=dist/Debug/GNU-Linux-x86/hybrid-sampler
 CND_PACKAGE_DIR_Debug=dist/Debug/GNU-Linux-x86/package
-CND_PACKAGE_NAME_Debug=ntru-lattices.tar
-CND_PACKAGE_PATH_Debug=dist/Debug/GNU-Linux-x86/package/ntru-lattices.tar
+CND_PACKAGE_NAME_Debug=hybrid-sampler.tar
+CND_PACKAGE_PATH_Debug=dist/Debug/GNU-Linux-x86/package/hybrid-sampler.tar
 # Release configuration
 CND_PLATFORM_Release=GNU-Linux-x86
 CND_ARTIFACT_DIR_Release=dist/Release/GNU-Linux-x86
-CND_ARTIFACT_NAME_Release=ntru-lattices
-CND_ARTIFACT_PATH_Release=dist/Release/GNU-Linux-x86/ntru-lattices
+CND_ARTIFACT_NAME_Release=hybrid-sampler
+CND_ARTIFACT_PATH_Release=dist/Release/GNU-Linux-x86/hybrid-sampler
 CND_PACKAGE_DIR_Release=dist/Release/GNU-Linux-x86/package
-CND_PACKAGE_NAME_Release=ntru-lattices.tar
-CND_PACKAGE_PATH_Release=dist/Release/GNU-Linux-x86/package/ntru-lattices.tar
+CND_PACKAGE_NAME_Release=hybrid-sampler.tar
+CND_PACKAGE_PATH_Release=dist/Release/GNU-Linux-x86/package/hybrid-sampler.tar
 #
 # include compiler specific variables
 #
