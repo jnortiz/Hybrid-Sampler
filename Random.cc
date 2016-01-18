@@ -50,7 +50,6 @@ ZZX RandomPoly(const unsigned int degree)
 ZZX RandomPolyFixedSqNorm(const ZZ& SqNorm, const unsigned int degree)
 {
     unsigned int i;
-    ZZ SqNorm0, Ratio;
     ZZX f;
     f.SetLength(degree+1);
 

@@ -25,8 +25,9 @@ RR NormOfBasis(const mat_RR& B);
 vec_RR Isometry(const vec_RR& b);
 
 /* Ring-Peikert for sampling from the ring R = Z[x]/<x^n + 1>*/
-ZZX RingPeikert(vec_RR& c, const vec_RR& X, RR b, RR eta, RR factor, RR v, long precision, int m, int tailcut);
-void OfflineRingPeikert(vec_RR& X, vec_RR& c, RR& b, RR& v, long precision, int m, int n, int tailcut, int q);
+ZZX Ring_Klein(const mat_RR& B, const mat_RR& BTilde, const vec_RR& Sigma, const vec_RR& Center);
+ZZX Ring_Peikert(vec_RR& c, const vec_RR& X, RR b, RR eta, RR factor, RR v, long precision, int m, int tailcut);
+void OfflineRing_Peikert(vec_RR& X, mat_RR& b, RR& v, const mat_RR& BTilde, const vec_RR& Sigma, long precision, int m, int tailcut);
 
 /* Continuous Gaussian sampling */
 RR Ziggurat(const vec_RR& X, int m, RR sigma, long precision, RR v);

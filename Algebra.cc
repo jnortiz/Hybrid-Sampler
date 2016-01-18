@@ -16,7 +16,6 @@
 using namespace std;
 using namespace NTL;
 
-
 ZZX FastMod(const ZZX& f)
 {
     return (trunc(f,N0) - (f>>N0));
@@ -244,9 +243,8 @@ ZZ_pX Inverse(const ZZX& f)
     ZZ_p Res_f_1;
     XGCD(Res_f, rho_f, iphi, f, phi, 0);    
     inv(Res_f_1, conv<ZZ_p>(Res_f));
-    assert(Res_f_1*conv<ZZ_p>(Res_f) == 1);    
-    return ( Res_f_1 * conv<ZZ_pX>(rho_f) );
-    
+    assert(Res_f_1*conv<ZZ_p>(Res_f) == 1);       
+    return ( Res_f_1 * conv<ZZ_pX>(rho_f) );    
 }
 
 
@@ -589,15 +587,16 @@ void XGCD(vec_RR& d, vec_RR& s, vec_RR& t, const vec_RR& a, const vec_RR& b) {
         return;
     }//end-if
     
-    long e = max(deg(a), deg(b)) + 1;
+//    long e = max(deg(a), deg(b)) + 1;
+    long e = N0;
+    
+    cout << "e: " << e << endl;
     
     CC *temp = new CC[e];
-    vec_RR u, v, u0, v0, u1, v1, u2, v2, q;
-    u.SetLength(e); v.SetLength(e);
+    vec_RR swap, u, v, u0, v0, u1, v1, u2, v2, q;
     u0.SetLength(e); v0.SetLength(e);
     u1.SetLength(e); v1.SetLength(e);
     u2.SetLength(e); v2.SetLength(e);
-    q.SetLength(e);
     
     u1[0] = 1; v2[0] = 1;
     u = a; v = b;
@@ -605,18 +604,22 @@ void XGCD(vec_RR& d, vec_RR& s, vec_RR& t, const vec_RR& a, const vec_RR& b) {
     do {
         
         EuclideanDiv(q, u, u, v);
-        vec_RR swap;
+        
         swap = u;
         u = v;
         v = swap;
+        
         u0 = u2;
         v0 = v2;
-        FFTMulMod(temp, q, u2);
+        
+        FFTMulMod(temp, q, u2); // q and u2 must have the same length        
         for(int i = 0; i < e; i++)
             u2[i] = u1[i] - temp[i].real();
+        
         FFTMulMod(temp, q, v2);
         for(int i = 0; i < e; i++)
             v2[i] = v1[i] - temp[i].real();
+        
         u1 = u0;
         v1 = v0;
         
@@ -790,13 +793,15 @@ void FFTMulMod(CC * const c, const vec_RR a, const vec_RR b) {
 
     ReverseFFTStep(reverse, pq, 2*la, omega_inv, la);
     
-//    cout << "reverse: ";
-//    
-//    for(int i = 0; i < 2*la; i++)
-//        cout << reverse[i] << " ";
-//    cout << endl;
+    cout << "reverse: ";
     
-    FastMod(c, reverse, la);
+    cout << (2*la)/N0 << endl;
+    
+    for(int i = 0; i < 2*la; i++)
+        cout << reverse[i] << " ";
+    cout << endl;
+    
+    FastMod(c, reverse, 2*la);
     
     delete[] a_FFT; delete[] b_FFT;
     delete[] pq; delete[] reverse;
@@ -808,25 +813,53 @@ void FFTMulMod(CC * const c, const vec_RR a, const vec_RR b) {
 void FastMod(CC * const out, CC const * const in, const int N) {    
     
     /**
-     * @param out - N-dimension complex vector
-     * @param in - 2*N-dimension complex vector
+     * @param out - N0-dimension complex vector
+     * @param in - N-dimension complex vector
      * @param N - "in" length
     */ 
     
-    for(int i = 0; i < N; i++)
-        out[i] = in[i] - in[i + N];
+    assert(N % N0 == 0);
+    
+    int i, j, n;
+    
+    n = N/N0;
+
+    for(i = 0; i < N0; i++)
+        out[i] = in[i];
+    
+    for(i = 0; i < (n-1); i++) {
+        if(i % 2 == 0)
+            for(j = 0; j < N0; j++)
+                out[j] -= in[i*N0+j+N0];
+        else
+            for(j = 0; j < N0; j++)
+                out[j] += in[i*N0+j+N0];
+    }//end-for
     
 }//end-FastMod()
 
 void FastMod(vec_RR& f) {
     
-    int i;
+    int i, j, n;
     
-    for(i = 0; i < N0 && (i+N0) < f.length(); i++)
-        f[i] = f[i] - f[i+N0];
+    n = f.length()/N0; // f.length() is multiple of N0
+    
+    for(i = 0; i < (n-1); i++) {
+        if(i % 2 == 0)
+            for(j = 0; j < N0; j++)
+                f[j] -= f[i*N0+j+N0];
+        else
+            for(j = 0; j < N0; j++)
+                f[j] += f[i*N0+j+N0];
+    }//end-for
+    
+//    for(i = 0; i < N0 && (i+N0) < f.length(); i++)
+//        f[i] = f[i] - f[i+N0];
 
     for(i = N0; i < f.length(); i++)
         f[i] = conv<RR>(0);
+    
+    f.SetLength(N0);
     
 }//end-FastMod()
 
@@ -894,7 +927,9 @@ void EuclideanDiv(vec_RR& q, vec_RR& r, const vec_RR& a, const vec_RR& b) {
     }//end-while
     
     delete[] mult;
+    r.SetLength(N0); q.SetLength(N0);
     s.kill();
+    
     cout << "Pass!" << endl;
     
 }//end-EuclidenDiv()
@@ -923,19 +958,133 @@ int deg(const vec_RR& p) {
     int i = 0, rounding;
     float p_r = 0;
     
-    for(i = p.length()-1; i >= 0; i--) {
-        
-        p_r = conv<float>(p[i]);
-        
-        if(p[i] > 0.0)
-            rounding = conv<int>(floor(p_r));
-        else
-            rounding = conv<int>(ceil(p_r));
-        
-        if(rounding != 0) break;
-        
+    for(i = p.length()-1; i >= 0; i--) {        
+        p_r = conv<float>(p[i]);        
+        if(p[i] > 0.0) rounding = conv<int>(floor(p_r));
+        else rounding = conv<int>(ceil(p_r));        
+        if(rounding != 0) break;        
     }//end-for    
     
     return i;
     
 }//end-deg()
+
+/*
+ * Operations in Q[x]/<x^n+1>:
+ * 
+ * Addition: already provided by NTL as add(c, a, b);
+ * Subtraction: already provided by NTL as sub(c, a, b);
+ * Multiplication: provided by FFTMulMod();
+ * Division: provided by EuclideanDiv();
+ * 
+ */
+
+void InnerProduct(vec_RR& c, const vec_RR& a, const vec_RR& b) {
+
+    /*
+     * In this scenario, m = 2; so, a and b are 2N-length vectors
+     */
+    
+    vec_RR a1, b1, a2, b2;
+    int i;
+    a1.SetLength(N0); b1.SetLength(N0);
+    a2.SetLength(N0); b2.SetLength(N0);
+    c.SetLength(N0);
+    
+    for(i = 0; i < N0; i++) {
+        a1[i] = a[i];
+        b1[i] = b[i];
+    }//end-for
+
+    for(i = N0; i < 2*N0; i++) {
+        a2[i-N0] = a[i];
+        b2[i-N0] = b[i];
+    }//end-for
+    
+    CC mult1[N0], mult2[N0];
+    
+    FFTMulMod(mult1, a1, b1);
+    FFTMulMod(mult2, a2, b2);
+    
+    for(i = 0; i < N0; i++)
+        c[i] = (mult1[i].real() + mult2[i].real());
+
+    a1.kill(); b1.kill();
+    a2.kill(); b2.kill();
+    
+}//end-InnerProduct()
+
+void SquareRoot(vec_RR& sqr, const vec_RR& sigma) {
+    
+    vec_RR p_x, sqr_aux;
+    sqr_aux.SetLength(N0);
+    p_x = sigma;
+    
+    int deg_p_x = deg(p_x);
+    
+    assert(deg_p_x % 2 == 0);
+    
+    /* First case: the leading coefficient */
+    RR ld_coeff = p_x[deg_p_x];
+    sqr_aux[deg_p_x/2] = sqrt(ld_coeff);
+    sub(p_x[deg_p_x], p_x[deg_p_x], ld_coeff);
+    
+    vec_RR a, b, div, q, r, subt;
+    CC mult[N0];
+    int i, deg_sqr, least_t;
+    
+    a.SetLength(N0); b.SetLength(N0);
+    div.SetLength(N0); subt.SetLength(N0);
+    mul(div, sqr_aux, conv<RR>(2));
+    deg_sqr = deg(sqr_aux);
+    deg_p_x = deg(p_x);
+    
+    while(deg_p_x >= deg_sqr) {
+        
+        clear(a); clear(b); clear(q);
+        
+        a[deg_p_x] = p_x[deg_p_x]; // Actual leading coeff. of sigma
+        EuclideanDiv(q, r, a, div);
+        add(sqr_aux, sqr_aux, q);
+        
+        least_t = LastCoeff(sqr_aux);
+
+        clear(subt);
+        for(i = deg_sqr; i > least_t; i--)
+            mul(subt[i], sqr_aux[i], conv<RR>(2));
+        add(subt[least_t], subt[least_t], sqr_aux[least_t]);
+        
+        b[least_t] = sqr_aux[least_t];
+        FFTMulMod(mult, subt, b);
+        
+        for(i = 0; i < N0; i++)
+            p_x[i] = p_x[i] - mult[i].real();
+        
+        deg_p_x = deg(p_x);
+        
+    }//end-while    
+    
+    sqr = sqr_aux;
+    
+    p_x.kill(); sqr_aux.kill();
+    a.kill(); b.kill();
+    div.kill(); subt.kill();
+    q.kill(); r.kill();
+    
+}//end-SquareRoot()
+
+int LastCoeff(const vec_RR& f) {
+    
+    int to_integer, i = f.length()-1;
+    float rounding;
+    
+    for(i = 0; i < f.length(); i++) {
+        rounding = conv<float>(f[i]);
+        if(f[i] > 0.0) to_integer = conv<int>(floor(rounding));
+        else to_integer = conv<int>(ceil(rounding));        
+        if(to_integer != 0) break;
+    }//end-for
+    
+    return i;
+    
+}//end-LastCoeff()

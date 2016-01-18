@@ -17,8 +17,9 @@ using std::complex;
 // N0 is the degree of the polynomial ring used. N0 must be a power of 2!
 // q0 is the modulus w.r.t. whom the integers are reduced. We suggest to take q0 prime
 //=====================================================================================
-#define N0 8
+#define N0 2
 #define q0 (1<<20)
+//#define q0 7
 //======================================================================================
 
 const ZZ q1 = conv<ZZ>(q0);

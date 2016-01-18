@@ -29,7 +29,9 @@ void XGCD(vec_RR& d, vec_RR& s, vec_RR& t, const vec_RR& a, const vec_RR& b);
 void XGCD(vec_RR& g, vec_RR& u, vec_RR& v, vec_RR& a1, vec_RR& b1, const vec_RR& a, const vec_RR& b);
 void EuclideanDiv(vec_RR& q, vec_RR& r, const vec_RR& a, const vec_RR& b);
 int isZero(const vec_RR& f);
-void Rounding(vec_RR& f);
 int deg(const vec_RR& p);
+void InnerProduct(vec_RR& c, const vec_RR& a, const vec_RR& b);
+void SquareRoot(vec_RR& sqr, const vec_RR& sigma);
+int LastCoeff(const vec_RR& f);
 
 #endif

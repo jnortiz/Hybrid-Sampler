@@ -7,10 +7,16 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/home/jnortiz/Dropbox/NTRU-Lattices/Algebra.h</file>
-            <file>file:/home/jnortiz/Dropbox/NTRU-Lattices/params.h</file>
-            <file>file:/home/jnortiz/Dropbox/NTRU-Lattices/Algebra.cc</file>
-            <file>file:/home/jnortiz/Dropbox/NTRU-Lattices/main.cpp</file>
+            <file>file:/home/jnortiz/git/Hybrid-Sampler/Sampling.cc</file>
+            <file>file:/home/jnortiz/git/Hybrid-Sampler/Scheme.cc</file>
+            <file>file:/home/jnortiz/git/Hybrid-Sampler/params.h</file>
+            <file>file:/home/jnortiz/git/Hybrid-Sampler/Random.cc</file>
+            <file>file:/home/jnortiz/git/Hybrid-Sampler/Random.h</file>
+            <file>file:/home/jnortiz/git/Hybrid-Sampler/FFT.cc</file>
+            <file>file:/home/jnortiz/git/Hybrid-Sampler/Sampling.h</file>
+            <file>file:/home/jnortiz/git/Hybrid-Sampler/main.cpp</file>
+            <file>file:/home/jnortiz/git/Hybrid-Sampler/Algebra.h</file>
+            <file>file:/home/jnortiz/git/Hybrid-Sampler/Algebra.cc</file>
         </group>
     </open-files>
 </project-private>

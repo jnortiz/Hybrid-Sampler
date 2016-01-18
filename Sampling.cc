@@ -9,6 +9,7 @@
 #include <gmp.h>
 
 #include "Sampling.h"
+#include "Algebra.h"
 #include "params.h"
 
 using namespace std;
@@ -309,7 +310,39 @@ vec_RR Isometry(const vec_RR& b) {
     
 }//end-Isometry()
 
-ZZX RingPeikert(vec_RR& c, const vec_RR& X, RR b, RR eta, RR factor, RR v, long precision, int m, int tailcut) {
+//ZZX Ring_Klein(const mat_RR& B, const mat_RR& BTilde, const vec_RR& Sigma, const vec_RR& Center) {
+//    /**
+//     * @param B - Basis B - (2*N0, 2*N0)
+//     * @param BTilde - Gram-Schmidt Orthogonalization of B - (2*N0, 2*N0)
+//     * @param Sigma - Standard deviation - (N0)
+//     * @param Center - Center of the distribution - (m*N0 = 2*N0)
+//     * @return A vector sampling according to D_{Span_R(B), \sigma, \center} - (m*N0 = 2*N0)
+//     */
+//    vec_RR c_i, d_i, inner_p, v_i;
+//    vec_RR r, sigma, sigma_i;
+//    CC mult[N0];
+//    ZZX sample;
+//    c_i = Center;
+//    sigma = Sigma;
+//    v_i.SetLength(Center.length());    
+//    
+//    for(int i = (2*N0-1); i >= 0; i++) {
+//        InnerProduct(d_i, c, Block_BTilde[i]);
+//        InnerProduct(inner_p, Block_BTilde[i], Block_BTilde[i]);
+//        EuclideanDiv(d_i, r, d_i, inner_p);
+//        FFTMulMod(mult, sigma, sigma);
+//        for(j = 0; j < N0; j++)
+//            sigma[i] = mult[i].real();
+//        EuclideanDiv(sigma_i, r, sigma, inner_p);
+////        Ring_Peikert();
+//        
+//    }//end-for
+//    
+//    return sample;
+//     
+//}//end-Ring_Klein
+
+ZZX Ring_Peikert(vec_RR& c, const vec_RR& X, RR b, RR eta, RR factor, RR v, long precision, int m, int tailcut) {
 
     cout << "[!] Ring-Peikert Gaussian sampler status: ";
     
@@ -349,28 +382,70 @@ ZZX RingPeikert(vec_RR& c, const vec_RR& X, RR b, RR eta, RR factor, RR v, long 
 }//end-OfflineRingPeikert()
 
 /* Offline phase of Ring-Peikert. Suppose the canonical Z-basis of ring R */
-void OfflineRingPeikert(vec_RR& X, vec_RR& c, RR& b, RR& v, long precision, int m, int n, int tailcut, int q) {
-    
+void OfflineRing_Peikert(vec_RR& X, mat_RR& b, RR& v, const mat_RR& BTilde, const vec_RR& Sigma, long precision, int m, int tailcut) {
+
     /**
-     * 
      * @param X - The x-coordinates of the partitioning in Ziggurat method
-     * @param c
-     * @param b
-     * @param v
+     * @param b - Parameter b for all BTilde[i]
+     * @param v - Parameter of Ziggurat algorithm
+     * @param BTilde - Orthogonalization of basis B
+     * @param Sigma - Standard deviation
      * @param precision
-     * @param m
-     * @param n
+     * @param m - Number of rectangles in Ziggurat partitioning
      * @param tailcut
-     * @param q
-     */
+     */    
+
+    /* Pre-computation of parameter b for all vectors of the orthogonalization */
+    vec_RR div, inner_pr, mult_RR, r, Sigma_e, sigma_squared;
+    CC mult[N0];
+    int i, j;
     
-    c.SetLength(n);
-
-    int square = (int)(sqrt(q));
-    b = to_RR(NTL::RandomBnd(square)); // SigmaE(b\bar{b} + \eta^2) = Sigma
-    for(int i = 0; i < c.length(); i++)
-        c[i] = to_RR(NTL::RandomBnd(square));
-
+    b.SetDims(BTilde.NumRows(), N0);
+    inner_pr.SetLength(N0);
+    mult_RR.SetLength(N0);
+    Sigma_e.SetLength(2*N0);
+    sigma_squared.SetLength(N0);
+    
+    RR epsilon, eta_squared;
+    epsilon = to_RR(3*N0);
+    eta_squared = NTL::ComputePi_RR()*sqrt(log(2*(1+epsilon))/2);
+    mul(eta_squared, eta_squared, eta_squared);
+    
+    for(i = 0; i < (2*N0); i += 2)
+        Sigma_e[i] = conv<RR>(1);
+    cout << Sigma_e << endl;
+    
+    FFTMulMod(mult, Sigma, Sigma);
+    for(i = 0; i < N0; i++)
+        sigma_squared[i] = mult[i].real();    
+    
+    for(i = 0; i < BTilde.NumRows(); i++) {
+        InnerProduct(inner_pr, BTilde[i], BTilde[i]);
+        inner_pr.SetLength(Sigma_e.length());
+        
+        cout << "/*** MULT ***/\n";
+        cout << "inner_pr: " << inner_pr << endl << Sigma_e << endl;
+        FFTMulMod(mult, Sigma_e, inner_pr);
+        for(j = 0; j < N0; j++)
+            mult_RR[j] = mult[j].real();
+        
+        cout << "\ndeg: " << deg(mult_RR) << " mult_RR: " << mult_RR << endl;
+        cout << "\ndeg: " << deg(sigma_squared) << " sigma_squared: " << sigma_squared << endl;
+        
+        EuclideanDiv(div, r, sigma_squared, mult_RR);
+        div[0] -= eta_squared;
+        cout << "b^2: " << div << endl;
+        SquareRoot(b[i], div);        
+    }//end-for
+    
+    for(i = 0; i < b.NumRows(); i++)
+        cout << b[i] << endl;
+    cout << endl;
+    
+    div.kill(); inner_pr.kill(); 
+    mult_RR.kill(); r.kill();
+    Sigma_e.kill(); sigma_squared.kill();
+    
     RR factor;    
     NTL::div(factor, to_RR(1), sqrt(2*ComputePi_RR()));    
 
