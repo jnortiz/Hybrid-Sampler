@@ -37,7 +37,7 @@ static timestamp_t get_timestamp() {
     return now.tv_nsec + (timestamp_t)now.tv_sec * 1000000000.0;
 }//end-get_timestamp()
 
-int main(int argc, char** argv) {
+int main() {
 
     srand(rdtsc());
     
@@ -70,9 +70,9 @@ int main(int argc, char** argv) {
     
     cout << "[!] KeyGen average running time for " << n_iterations << " iterations: " << (float)(average/((float)(n_iterations)*1000000000.0)) << " s." << endl;           
 
-    int precision_id = 1;
+    int function_id = 4;
     
-    switch(precision_id) {
+    switch(function_id) {
         case 1: {
             /*
              * Ring_Klein Gaussian sampler 
@@ -167,31 +167,19 @@ int main(int argc, char** argv) {
             }//end-for
         #endif            
             
-            mat_RR b;
-            vec_RR Sigma, X;
-            RR v;
-
-            Sigma.SetLength(N0);
-            
-            for(i = 0; i < N0; i++)
-                Sigma[i] = RandomBnd(q0*10);
-            
-            cout << "Sigma: " << Sigma << endl;
-            
-            long precision = 107;
-            int m = 64;
-            int tailcut = 13;
-            
-            clear(b);
-            
-            OfflineRing_Peikert(X, b, v, Block_BTilde, Sigma, precision, m, tailcut);
-
-            X.kill();
-            b.kill();
-            
+//            vec_RR sigma;
+//            sigma.SetLength(N0);
+//            
+//            for(i = 0; i < N0; i++)
+//                sigma[i] = RandomBnd(sqrt(q0));
+//            
+//            RR sigma0 = to_RR(3.145);
+//            
+//            OfflineRingPeikert(sigma0, sigma, Block_BTilde);
+//
+//            sigma.kill();            
             B.kill();
             Block_BTilde.kill();
-            Sigma.kill();
 
             break;
         }//end-case-1
@@ -215,7 +203,7 @@ int main(int argc, char** argv) {
 
             FFTMul(out, a_, b_);
 
-            cout << "\n/** FFTMul **/" << endl;
+            cout << "/** FFTMul **/" << endl;
             for(int i = 0; i < 2*N0; i++)
                 cout << out[i] << " ";
             cout << endl;
@@ -226,68 +214,6 @@ int main(int argc, char** argv) {
             break;
         }//end-case-2
         case 3: {
-            
-            cout << endl;    
-            /*
-             * Euclidean division of polynomials
-             */             
-
-            vec_RR q, r, a_x, b_x;
-
-        //    int k = NextPowerOfTwo(N0+1);
-        //    int N = (int)pow(2.0, (float)k);
-            a_x.SetLength(N0);
-            b_x.SetLength(N0);
-
-            int sr_q = sqrt(q0);
-            
-            for(int i = 0; i < N0; i++) {
-                a_x[i] = RandomBnd(sr_q);
-//                b_x[i] = RandomBnd(sr_q);
-            }
-            
-            b_x = a_x;
-//            a_x[0] = 1;
-//            a_x[1] = 1;
-//            a_x[2] = 1;
-//            a_x[3] = 1;
-//            a_x[4] = 1;
-//            a_x[5] = 0;
-//            a_x[6] = 0;
-//            a_x[7] = 0;
-//
-//            b_x[0] = 1;
-//            b_x[1] = 0;
-//            b_x[2] = 0;
-//            b_x[3] = 0;
-//            b_x[4] = 1;
-//            b_x[5] = 0;
-//            b_x[6] = 0;
-//            b_x[7] = 0;
-
-            EuclideanDiv(q, r, a_x, b_x);
-
-            cout << "a(x) = " << a_x << endl;
-            cout << "b(x) = " << b_x << endl;
-            cout << "q(x) = " << q << endl;
-            cout << "r(x) = " << r << endl;
-
-            q.kill(); r.kill();
-            a_x.kill(); b_x.kill();
-            
-            ZZX test;
-            test.SetLength(N0);
-            test[0] = conv<ZZ>(10);
-            
-            cout << endl << test << endl;
-
-            NTL::sub(test, conv<ZZ>(-4), test);
-            
-            cout << endl << test << endl;
-            
-            break;            
-        }//end-case-3
-        case 4: {
             
             cout << endl;    
             /*
@@ -308,75 +234,16 @@ int main(int argc, char** argv) {
             
             break;
         }
-        case 5: {
+        case 4: {
             
-            cout << endl;
-            /*
-             * XGCD
-             */
+            Vec<ZZX> C;
+            BuildVandermondeMatrix(C);
             
-            vec_RR a_x, b_x;
-            a_x.SetLength(N0+1);
-            b_x.SetLength(N0); // Cyclotomic polynomial
+            for(int i = 0; i < N0; i++)
+                cout << C[i] << endl;
+    
+            C.kill();
             
-            a_x[0] = 1;
-            a_x[N0] = 1;
-
-            b_x[0] = 29;
-            b_x[1] = -119;
-            b_x[2] = -209;
-            b_x[3] = -50;
-            b_x[4] = 159;
-            b_x[5] = -609;
-            b_x[6] = -381;
-            b_x[7] = 211;            
-            
-            vec_RR d, s, t;
-
-            XGCD(d, s, t, a_x, b_x);
-
-            cout << "\na(x) = " << a_x << endl;
-            cout << "b(x) = " << b_x << endl;
-            cout << "gcd(a,b) = " << d << endl;
-            cout << "inv(a) = " << t << endl;
-            cout << "inv(b) = " << s << endl;
-
-            int q = 23;
-            
-            for(int i = 0; i < t.length(); i++)
-                cout << (conv<int>(conv<float>(t[i])) % q) << " ";
-            cout << endl;
-
-            for(int i = 0; i < s.length(); i++)
-                cout << (conv<int>(conv<float>(s[i])) % q) << " ";
-            cout << endl;
-            
-            a_x.kill();
-            b_x.kill();
-            d.kill();
-            s.kill();
-            t.kill();
-            
-            break;
-        }//end-case-5
-        case 6: {
-            
-            vec_RR sigma, sqr;
-            sigma.SetLength(N0);
-            
-            sigma[0] = 1;
-            sigma[1] = 2;
-            sigma[2] = 3;
-            sigma[3] = 0;
-            sigma[4] = -1;
-            sigma[5] = -2;
-            sigma[6] = 1;
-            sigma[7] = 0;
-            
-            SquareRoot(sqr, sigma);
-            
-            sigma.kill(); sqr.kill();
-
             break;
         }
         default:

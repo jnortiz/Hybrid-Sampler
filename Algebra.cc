@@ -567,188 +567,6 @@ void FFTMul(CC * const c, const vec_RR& a, const vec_RR& b) {
     
 }//end-FFTMulMod()
 
-void XGCD(vec_RR& d, vec_RR& s, vec_RR& t, const vec_RR& a, const vec_RR& b) {
-    
-    if(IsZero(b)) {        
-        int la = a.length();
-        s.SetLength(la); // set(s);
-        t.SetLength(la); // clear(t);        
-        s[0] = 1;
-        d = a;
-        return;        
-    }//end-if
-    
-    if(IsZero(a)) {
-        int lb = b.length();
-        s.SetLength(lb);
-        t.SetLength(lb);
-        t[0] = 1;
-        d = b;
-        return;
-    }//end-if
-    
-//    long e = max(deg(a), deg(b)) + 1;
-    long e = N0;
-    
-    cout << "e: " << e << endl;
-    
-    CC *temp = new CC[e];
-    vec_RR swap, u, v, u0, v0, u1, v1, u2, v2, q;
-    u0.SetLength(e); v0.SetLength(e);
-    u1.SetLength(e); v1.SetLength(e);
-    u2.SetLength(e); v2.SetLength(e);
-    
-    u1[0] = 1; v2[0] = 1;
-    u = a; v = b;
-    
-    do {
-        
-        EuclideanDiv(q, u, u, v);
-        
-        swap = u;
-        u = v;
-        v = swap;
-        
-        u0 = u2;
-        v0 = v2;
-        
-        FFTMulMod(temp, q, u2); // q and u2 must have the same length        
-        for(int i = 0; i < e; i++)
-            u2[i] = u1[i] - temp[i].real();
-        
-        FFTMulMod(temp, q, v2);
-        for(int i = 0; i < e; i++)
-            v2[i] = v1[i] - temp[i].real();
-        
-        u1 = u0;
-        v1 = v0;
-        
-    } while(!isZero(v));
-    
-    d = u;
-    s = u1;
-    t = v1;
-    
-    if(IsZero(d)) return;
-    if(IsOne(d[deg(d)])) return;
-    
-    /* make gcd monic */
-    
-}//end-XGCD()
-
-void XGCD(vec_RR& g, vec_RR& u, vec_RR& v, vec_RR& a1, vec_RR& b1, const vec_RR& a, const vec_RR& b) {
-// d = resultant of a and b;
-// if r != 0, then computes s and t such that:
-//   a*u + b*v = g;
-// otherwise s and t not affected.
-// if !deterministic, then resultant computation may use a randomized strategy
-//    that errs with probability no more than 2^{-80}.
-    
-    cout << "[!] XGCD status: ";
-
-    int length = a.length();
-    
-    if(a.length() != b.length()) {
-        
-        length = max(a.length(), b.length());
-    
-        cout << "max_length: " << length << endl;        
-        
-        if(length % 2 != 0) { // If the length is not a power of two
-            int k = NextPowerOfTwo(length+1);        
-            length = (int)(pow((float)2.0, k));
-        }//end-if
-        
-    }//end-if
-    
-    cout << "Length: " << length << endl;
-    
-    vec_RR r0, r1;
-    vec_RR s0, s1;
-    vec_RR t0, t1;
-        
-    s0.SetLength(length); s1.SetLength(length);
-    t0.SetLength(length); t1.SetLength(length);
-    
-    r0 = a; r1 = b;
-    s0[0] = conv<RR>(1); t1[0] = conv<RR>(1);
-    r0.SetLength(length);
-    r1.SetLength(length);
-    
-    vec_RR q, r, residue, s, t;
-    CC *mult = new CC[length];
-    int i, j;
-    
-    r.SetLength(length);
-    s.SetLength(length);
-    t.SetLength(length);
-    
-    r[0] = -1; // For the first iteration
-    
-    for(i = 1; !isZero(r) || i < 10; i++) {
-        
-        cout << "\nr: " << r << endl;
-        cout << "r0: " << r0 << endl << "r1: " << r1 << endl;
-        
-        EuclideanDiv(q, residue, r0, r1); // deg(r0) >= deg(r1)
-
-        cout << "quotient: " << q << endl;
-        cout << "residue: " << residue << endl;
-        
-        FFTMulMod(mult, q, r1); // q.length == r1.length and a power of two        
-        cout << "Mult1: OK!" << endl;
-        for(j = 0; j < length; j++) {
-            r[j] = r0[j] - mult[j].real();
-            cout << mult[i] << " ";
-        }
-        cout << endl;
-        
-        FFTMulMod(mult, q, s1);
-        cout << "Mult2: OK!" << endl;
-        for(j = 0; j < length; j++) {
-            s[j] = s0[j] - mult[j].real();
-            cout << mult[i] << " ";
-        }
-        cout << endl;
-
-        FFTMulMod(mult, q, t1);
-        cout << "Mult3: OK!" << endl;
-        for(j = 0; j < length; j++) {
-            t[j] = t0[j] - mult[j].real();
-            cout << mult[i] << " ";
-        }
-        cout << endl;
-        
-        r0 = r1; r1 = r;
-        s0 = s1; s1 = s;
-        t0 = t1; t1 = t;
-        
-    }//end-for
-    
-    q.kill(); residue.kill();
-    r1.kill(); r.kill();    
-    s1.kill(); t1.kill();
-    
-    g = r0;
-    u = s0;
-    v = t0;
-    
-    r0.kill(); s0.kill(); t0.kill();
-    
-    mul(a1, t, conv<RR>(pow(-1.0, (float)(i-1))));
-    mul(b1, s, conv<RR>(pow(-1.0, (float)i)));
-
-    cout << endl << t << endl;
-    cout << endl << s << endl;
-    
-    s.kill(); t.kill();
-
-    cout << "Pass!";
-    
-    delete[] mult;
-    
-}//end-XGCD()
-
 /* It performs a(x)*b(x) % phi(x) */
 void FFTMulMod(CC * const c, const vec_RR a, const vec_RR b) {
 
@@ -863,228 +681,186 @@ void FastMod(vec_RR& f) {
     
 }//end-FastMod()
 
-int isZero(const vec_RR& f) {
-    
-    cout << "[!] isZero input: " << f << endl;
-    
-    int rounding;
-    
-    for(int i = 0; i < f.length(); i++) {        
-        if(f[i] > 0)
-            rounding = to_int(floor(f[i]));
-        else
-            rounding = to_int(ceil(f[i]));        
-        if(rounding != 0)
-            return 0;        
-    }//end-for
-    
-    return 1;
-    
-}//end-isZero()
-
-void EuclideanDiv(vec_RR& q, vec_RR& r, const vec_RR& a, const vec_RR& b) {
-    
-    /**
-     * @param q - quotient
-     * @param r - residue
-     * @param a - divisor
-     * @param b - dividend
-     */
-
-    /* 
-     * Important: in order to calling FFTMulMod(), the length of a(x) and b(x) 
-     * must be the same and a power of two.
-     */
-  
-    cout << "[!] EuclideanDiv status: ";
-    
-    assert(deg(a) >= deg(b));
-    
-    CC *mult = new CC[N0];
-    vec_RR aux_b, s; 
-    RR c;
-    int d, deg_r, i;
-
-    aux_b = b;
-    aux_b.SetLength(N0);
-    q.SetLength(N0);
-    s.SetLength(N0);
-    
-    r = a;    
-    d = deg(aux_b);
-    c = aux_b[d];    
-    deg_r = deg(r);
-    
-    while(deg_r >= d) {        
-        clear(s);        
-        div(s[deg_r-d], r[deg_r], c);
-        add(q, q, s);
-        FFTMulMod(mult, s, aux_b);
-        for(i = 0; i < r.length() && i < N0; i++)
-            r[i] = r[i] - mult[i].real();
-        FastMod(r);
-        deg_r = deg(r);        
-    }//end-while
-    
-    delete[] mult;
-    r.SetLength(N0); q.SetLength(N0);
-    s.kill();
-    
-    cout << "Pass!" << endl;
-    
-}//end-EuclidenDiv()
-
-void Rounding(vec_RR& f) {
-    
-    float p_r;
-    
-    for(int i = 0; i < f.length(); i++) {
-        
-        p_r = conv<float>(f[i]);
-
-        if(f[i] > 0.0)
-            p_r = conv<int>(floor(p_r));
-        else
-            p_r = conv<int>(ceil(p_r));
-
-        f[i] = conv<int>(p_r);
-        
-    }//end-for
-    
-}//end-Rounding()
-
-int deg(const vec_RR& p) {
-    
-    int i = 0, rounding;
-    float p_r = 0;
-    
-    for(i = p.length()-1; i >= 0; i--) {        
-        p_r = conv<float>(p[i]);        
-        if(p[i] > 0.0) rounding = conv<int>(floor(p_r));
-        else rounding = conv<int>(ceil(p_r));        
-        if(rounding != 0) break;        
-    }//end-for    
-    
-    return i;
-    
-}//end-deg()
-
 /*
  * Operations in Q[x]/<x^n+1>:
  * 
  * Addition: already provided by NTL as add(c, a, b);
  * Subtraction: already provided by NTL as sub(c, a, b);
  * Multiplication: provided by FFTMulMod();
- * Division: provided by EuclideanDiv();
+ * Division: to be implemented.
  * 
  */
 
-void InnerProduct(vec_RR& c, const vec_RR& a, const vec_RR& b) {
-
-    /*
-     * In this scenario, m = 2; so, a and b are 2N-length vectors
+/* Computation of the inner product as matrix multiplication [Lyubashevsky and Prest, 2015] */
+void InnerProduct(RR& out, const Vec<ZZX>& C, const vec_RR& a, const vec_RR& b) {
+    // <a, b> = a^{T} * \bar{V^{T}} * V * b
+    
+    /* Important: build Vandermonde matrix first by calling 
+     * BuildVandermondeMatrix(C).
      */
     
-    vec_RR a1, b1, a2, b2;
-    int i;
-    a1.SetLength(N0); b1.SetLength(N0);
-    a2.SetLength(N0); b2.SetLength(N0);
-    c.SetLength(N0);
+    /* D = a^{T} * \bar{V^{T}} * V */
+    int i, j;
+    vec_RR D;
+    RR sum;
+    D.SetLength(N0);
     
     for(i = 0; i < N0; i++) {
-        a1[i] = a[i];
-        b1[i] = b[i];
-    }//end-for
-
-    for(i = N0; i < 2*N0; i++) {
-        a2[i-N0] = a[i];
-        b2[i-N0] = b[i];
+        clear(sum);
+        for(j = 0; j < N0; j++)
+            sum = sum + a[j]*to_RR(C[j][i]);
+        D[i] = sum;
     }//end-for
     
-    CC mult1[N0], mult2[N0];
-    
-    FFTMulMod(mult1, a1, b1);
-    FFTMulMod(mult2, a2, b2);
-    
+    /* Final computation; the output is an integer. */
+    clear(sum);
     for(i = 0; i < N0; i++)
-        c[i] = (mult1[i].real() + mult2[i].real());
-
-    a1.kill(); b1.kill();
-    a2.kill(); b2.kill();
+        sum += D[i]*b[i];
+    
+    out = sum;
+    
+    D.kill();
     
 }//end-InnerProduct()
 
-void SquareRoot(vec_RR& sqr, const vec_RR& sigma) {
+/* Computation of (\bar{V^{T}} * VrootOfUnity) for the inner-product operation. */
+void BuildVandermondeMatrix(Vec<ZZX>& C) {
     
-    vec_RR p_x, sqr_aux;
-    sqr_aux.SetLength(N0);
-    p_x = sigma;
-    
-    int deg_p_x = deg(p_x);
-    
-    assert(deg_p_x % 2 == 0);
-    
-    /* First case: the leading coefficient */
-    RR ld_coeff = p_x[deg_p_x];
-    sqr_aux[deg_p_x/2] = sqrt(ld_coeff);
-    sub(p_x[deg_p_x], p_x[deg_p_x], ld_coeff);
-    
-    vec_RR a, b, div, q, r, subt;
-    CC mult[N0];
-    int i, deg_sqr, least_t;
-    
-    a.SetLength(N0); b.SetLength(N0);
-    div.SetLength(N0); subt.SetLength(N0);
-    mul(div, sqr_aux, conv<RR>(2));
-    deg_sqr = deg(sqr_aux);
-    deg_p_x = deg(p_x);
-    
-    while(deg_p_x >= deg_sqr) {
-        
-        clear(a); clear(b); clear(q);
-        
-        a[deg_p_x] = p_x[deg_p_x]; // Actual leading coeff. of sigma
-        EuclideanDiv(q, r, a, div);
-        add(sqr_aux, sqr_aux, q);
-        
-        least_t = LastCoeff(sqr_aux);
+    /* The Vandermonde matrix computes the i-th m-th roots of unity 
+     * and their exponentiations. The vector C is the multiplication
+     * (\bar{V^{T}} * V). */
 
-        clear(subt);
-        for(i = deg_sqr; i > least_t; i--)
-            mul(subt[i], sqr_aux[i], conv<RR>(2));
-        add(subt[least_t], subt[least_t], sqr_aux[least_t]);
-        
-        b[least_t] = sqr_aux[least_t];
-        FFTMulMod(mult, subt, b);
-        
-        for(i = 0; i < N0; i++)
-            p_x[i] = p_x[i] - mult[i].real();
-        
-        deg_p_x = deg(p_x);
-        
-    }//end-while    
+    // FYI: phi(m) = m/2 = N0
     
-    sqr = sqr_aux;
+    /* Construction of Valdermonde matrix V */
+    Vec< Vec<CC_t> > V;
+    int i, it = 0, j, m = 2*N0;
     
-    p_x.kill(); sqr_aux.kill();
-    a.kill(); b.kill();
-    div.kill(); subt.kill();
-    q.kill(); r.kill();
+    V.SetLength(N0);
+    C.SetLength(N0);
     
-}//end-SquareRoot()
-
-int LastCoeff(const vec_RR& f) {
-    
-    int to_integer, i = f.length()-1;
-    float rounding;
-    
-    for(i = 0; i < f.length(); i++) {
-        rounding = conv<float>(f[i]);
-        if(f[i] > 0.0) to_integer = conv<int>(floor(rounding));
-        else to_integer = conv<int>(ceil(rounding));        
-        if(to_integer != 0) break;
+    for(i = 0; i < N0; i++) {
+        V[i].SetLength(N0);
+        C[i].SetLength(N0);
     }//end-for
     
-    return i;
+    for(i = 0; i < m; i++) {        
+        if(NTL::GCD(i, m) == 1) {
+            for(j = 0; j < N0; j++)
+                V[it][j] = std::pow(omega, j); // Function std::atan is not defined for RR
+            it++;
+        }//end-if        
+    }//end-for
     
-}//end-LastCoeff()
+    Vec< Vec<CC_t> > transpV;
+    transpV.SetLength(N0);
+    
+    /* Transposition of Vandermonde matrix V */
+    for(i = 0; i < N0; i++) {
+        transpV[i].SetLength(N0);
+        for(j = 0; j < N0; j++)
+            transpV[i][j] = V[j][i];
+    }//end-for
+    
+    /* Computation of conjugate of V^{T} */
+    ConjugateOfMatrix(transpV);
+    
+    /* Integer matrix multiplication (\bar{V^{T}} * V) */
+    ZZX C_aux;
+    CC_t sum;
+    
+    C_aux.SetLength(N0);
+    
+    for (j = 0; j < N0; j++) {          
+        sum = 0.0;
+        for (i = 0; i < N0; i++)
+            sum = sum + transpV[0][i]*V[i][j];
+        C_aux[j] = Rounding(sum.real());
+    }//end-for
+    
+    
+    C[0] = C_aux;
+    C_aux.kill();
+    
+    for(i = 1; i < N0; i++)
+        C[i] = ShiftRight(C[i-1]);
+    
+    for(i = 0; i < N0; i++) {
+        V[i].kill();
+        transpV.kill();
+    }//end-for
+    
+    V.kill();
+    transpV.kill();
+
+}//end-BuildVandermondMatrix()
+
+ZZX ShiftRight(const ZZX& a) {
+    
+    ZZX output;
+    output.SetLength(N0);
+    
+    output[0] = -a[N0-1];
+    
+    for(int i = 1; i < N0; i++)
+        output[i] = a[i-1];
+    
+    return output;
+    
+}//end-ShiftRight()
+
+/* It computer the conjugate of each element in the matrix */
+void ConjugateOfMatrix(Vec< Vec<CC_t> >& M) {
+    
+    // Warning: Destructive function
+    
+    int cols, rows;
+    cols = M[0].length();
+    rows = M.length();
+    
+    for(int i = 0; i < rows; i++)
+        for(int j = 0; j < cols; j++)
+            M[i][j] = std::conj(M[i][j]);
+    
+}//end-ConjugateOfMatrix()
+
+/* Matrix multiplication of complex numbers generating an integer matrix */
+void ComplexMatrixMult(Vec<ZZX>& C, const Vec< Vec<CC_t> >& A, const Vec< Vec<CC_t> >& B) {       
+
+    int colsB, i, j, k, rowsA, rowsB;
+    
+    colsB = B[0].length();
+    rowsA = A.length();
+    rowsB = B.length();
+    
+    assert(A[0].length() == rowsB);
+
+    C.SetLength(rowsA);
+    for(i = 0; i < rowsA; i++)
+        C[i].SetLength(colsB);        
+
+    CC_t sum;
+    for (k = 0; k < rowsA; k++) {
+      for (j = 0; j < colsB; j++) {          
+          sum = 0.0;
+          for (i = 0; i < rowsB; i++)
+              sum = sum + A[k][i]*B[i][j];
+          C[k][j] = Rounding(sum.real());
+      }//end-for
+    }//end-for
+        
+}//end-Mult()
+
+ZZ Rounding(const long double& value) {
+    
+    ZZ r;
+    float fvalue = (float)value;
+
+    if(fvalue > 0.0)
+        r = to_ZZ(conv<int>(floor(fvalue)));
+    else
+        r = to_ZZ(conv<int>(ceil(fvalue)));
+
+    return r;
+    
+}//Rounding()

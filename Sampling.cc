@@ -166,6 +166,78 @@ signed int Sample4(RR_t c, RR_t sigma)
     }
 }
 
+/*****************************************************************************/
+
+ZZX Ring_Peikert(vec_RR& c, const vec_RR& X, RR b, RR eta, RR factor, RR v, long precision, int m, int tailcut) {
+
+    cout << "[!] Ring-Peikert Gaussian sampler status: ";
+    
+    RR::SetPrecision(precision);
+        
+    vec_RR p, x;
+    ZZX z;    
+    int n = c.length();    
+    
+    x.SetLength(n);   
+    for(int i = 0; i < x.length(); i++)
+        x[i] = Ziggurat(X, m, factor, precision, v);
+    
+    p.SetLength(n);
+    mul(p, x, b);
+    x.kill();
+    add(c, c, p);
+    p.kill();
+    
+    Vec< Vec<int> > P;   
+    Vec<int> begin;
+
+    z.SetLength(n);
+    
+    for(int i = 0; i < n; i++) {
+        BuildProbabilityMatrix(P, begin, precision, tailcut, eta, c[i]);
+        z[i] = to_ZZ(KnuthYao(P, begin, tailcut, eta, c[i]));               
+    }//end-for
+
+    cout << "Pass!" << endl;
+    
+    P.kill();
+    begin.kill();
+    
+    return z;
+    
+}//end-OfflineRingPeikert()
+
+void OfflineRingPeikert(const RR sigma0, const vec_RR sigma, const mat_RR BTilde) {
+
+    cout << "\n[!] Offline phase of Ring-Peikert status: ";
+    
+    // Constants
+    vec_RR sigmaEta;
+    sigmaEta.SetLength(N0);    
+    RR epsilon, eta, overPi, overTwo;
+    div(overPi, 1, ComputePi_RR());
+    div(overTwo, to_RR(1), to_RR(2));
+    div(epsilon, to_RR(1), to_RR(4)); // \epsilon \in (0, 1/2)
+    eta = overPi*sqrt(overTwo*(log(2*N0*(1+1/epsilon)))); // See Lemma 3 from (Ducas and Prest, 2015).
+    mul(sigmaEta[0], sigma0, eta);
+    
+    cout << "sigmaEta: " << sigmaEta << endl;
+        
+    // Standard deviation \sigma squared
+    CC *sigmaSquared = new CC[N0];    
+    FFTMulMod(sigmaSquared, sigma, sigma);
+    vec_RR sigmaSquaredRR;
+    sigmaSquaredRR.SetLength(N0);
+    for(int i = 0; i < N0; i++)
+        sigmaSquaredRR[i] = sigmaSquared[i].real();
+    delete[] sigmaSquared;
+
+    cout << "sigma: " << sigma << endl << "sigmaSquaredRR: " << sigmaSquaredRR << endl;
+        
+    cout << "Pass!" << endl;
+    
+}//end-OfflineRingPeikert()
+
 // Gram-Schmidt orthogonalization procedure for block isometric basis
 void BlockGSO(mat_RR& BTilde, const mat_RR& B, int n, int precision) {
     
@@ -341,117 +413,6 @@ vec_RR Isometry(const vec_RR& b) {
 //    return sample;
 //     
 //}//end-Ring_Klein
-
-ZZX Ring_Peikert(vec_RR& c, const vec_RR& X, RR b, RR eta, RR factor, RR v, long precision, int m, int tailcut) {
-
-    cout << "[!] Ring-Peikert Gaussian sampler status: ";
-    
-    RR::SetPrecision(precision);
-        
-    vec_RR p, x;
-    ZZX z;    
-    int n = c.length();    
-    
-    x.SetLength(n);   
-    for(int i = 0; i < x.length(); i++)
-        x[i] = Ziggurat(X, m, factor, precision, v);
-    
-    p.SetLength(n);
-    mul(p, x, b);
-    x.kill();
-    add(c, c, p);
-    p.kill();
-    
-    Vec< Vec<int> > P;   
-    Vec<int> begin;
-
-    z.SetLength(n);
-    
-    for(int i = 0; i < n; i++) {
-        BuildProbabilityMatrix(P, begin, precision, tailcut, eta, c[i]);
-        z[i] = to_ZZ(KnuthYao(P, begin, tailcut, eta, c[i]));               
-    }//end-for
-
-    cout << "Pass!" << endl;
-    
-    P.kill();
-    begin.kill();
-    
-    return z;
-    
-}//end-OfflineRingPeikert()
-
-/* Offline phase of Ring-Peikert. Suppose the canonical Z-basis of ring R */
-void OfflineRing_Peikert(vec_RR& X, mat_RR& b, RR& v, const mat_RR& BTilde, const vec_RR& Sigma, long precision, int m, int tailcut) {
-
-    /**
-     * @param X - The x-coordinates of the partitioning in Ziggurat method
-     * @param b - Parameter b for all BTilde[i]
-     * @param v - Parameter of Ziggurat algorithm
-     * @param BTilde - Orthogonalization of basis B
-     * @param Sigma - Standard deviation
-     * @param precision
-     * @param m - Number of rectangles in Ziggurat partitioning
-     * @param tailcut
-     */    
-
-    /* Pre-computation of parameter b for all vectors of the orthogonalization */
-    vec_RR div, inner_pr, mult_RR, r, Sigma_e, sigma_squared;
-    CC mult[N0];
-    int i, j;
-    
-    b.SetDims(BTilde.NumRows(), N0);
-    inner_pr.SetLength(N0);
-    mult_RR.SetLength(N0);
-    Sigma_e.SetLength(2*N0);
-    sigma_squared.SetLength(N0);
-    
-    RR epsilon, eta_squared;
-    epsilon = to_RR(3*N0);
-    eta_squared = NTL::ComputePi_RR()*sqrt(log(2*(1+epsilon))/2);
-    mul(eta_squared, eta_squared, eta_squared);
-    
-    for(i = 0; i < (2*N0); i += 2)
-        Sigma_e[i] = conv<RR>(1);
-    cout << Sigma_e << endl;
-    
-    FFTMulMod(mult, Sigma, Sigma);
-    for(i = 0; i < N0; i++)
-        sigma_squared[i] = mult[i].real();    
-    
-    for(i = 0; i < BTilde.NumRows(); i++) {
-        InnerProduct(inner_pr, BTilde[i], BTilde[i]);
-        inner_pr.SetLength(Sigma_e.length());
-        
-        cout << "/*** MULT ***/\n";
-        cout << "inner_pr: " << inner_pr << endl << Sigma_e << endl;
-        FFTMulMod(mult, Sigma_e, inner_pr);
-        for(j = 0; j < N0; j++)
-            mult_RR[j] = mult[j].real();
-        
-        cout << "\ndeg: " << deg(mult_RR) << " mult_RR: " << mult_RR << endl;
-        cout << "\ndeg: " << deg(sigma_squared) << " sigma_squared: " << sigma_squared << endl;
-        
-        EuclideanDiv(div, r, sigma_squared, mult_RR);
-        div[0] -= eta_squared;
-        cout << "b^2: " << div << endl;
-        SquareRoot(b[i], div);        
-    }//end-for
-    
-    for(i = 0; i < b.NumRows(); i++)
-        cout << b[i] << endl;
-    cout << endl;
-    
-    div.kill(); inner_pr.kill(); 
-    mult_RR.kill(); r.kill();
-    Sigma_e.kill(); sigma_squared.kill();
-    
-    RR factor;    
-    NTL::div(factor, to_RR(1), sqrt(2*ComputePi_RR()));    
-
-    v = ZCreatePartition(X, m, factor, precision, to_RR(tailcut));    
-    
-}//end-OfflineRingPeikert()
 
 /* DZCreatePartition defines the x- and y-axes of the rectangles in the Gaussian distribution */
 RR ZCreatePartition(vec_RR& X, int m, RR sigma, long n, RR tail) {
