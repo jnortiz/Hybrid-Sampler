@@ -236,13 +236,62 @@ int main() {
         }
         case 4: {
             
-            Vec<ZZX> C;
-            BuildVandermondeMatrix(C);
+            RR::SetOutputPrecision(4);
+            RR::SetPrecision(150);
             
+            vec_RR a, b, innerp;
+            a.SetLength(2*N0); b.SetLength(2*N0);
+            innerp.SetLength(N0);
+            
+            /* Defining a(x) and b(x) as random binary polynomials */
+            for(int i = 0; i < (2*N0); i++) {
+                a[i] = NTL::random_RR();
+                b[i] = NTL::random_RR();
+            }//end-for                
+            
+            cout << "\na in H: " << a << endl;
+            cout << "b in H: " << b << endl;
+
+            /* Computing the inner product of a(x) and b(x) \in H */
+            InnerProduct(innerp, a, b);
+            cout << endl << "<a, b>_K: " << innerp << endl;
+            innerp.kill();
+
+            /* Reducing a(x) and b(x) into K */
+            a.SetLength(N0);
+            b.SetLength(N0);
+            
+            cout << "\na in K: " << a << endl;
+            cout << "b in K: " << b << endl;
+            
+            /* Trying to invert a(x) in K */
+            vec_RR inverse;
+            CC one[N0];
+            inverse.SetLength(N0);            
+            Inverse(inverse, a);            
+            cout << endl << "a^{-1}: " << inverse << endl;
+            
+            /* Verifying if inversion was successful */
+            FFTMulMod(one, a, inverse);
+            inverse.kill();            
+            cout << "a times a^{-1}: ";
             for(int i = 0; i < N0; i++)
-                cout << C[i] << endl;
-    
-            C.kill();
+                cout << one[i] << " ";
+            cout << endl;
+
+            /* Square-root in K */
+            vec_RR sqr;
+            SquareRoot(sqr, a);
+            a.kill();
+            FFTMulMod(one, sqr, sqr);
+            cout << endl << "sqrt(a): " << sqr << endl;
+            
+            cout << "a in K: ";
+            for(int i = 0; i < N0; i++)
+                cout << one[i].real() << " ";
+            cout << endl;
+            
+            sqr.kill();
             
             break;
         }

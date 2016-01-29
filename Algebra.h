@@ -26,11 +26,9 @@ void FastMGS(RR_t Bst[2*N0][2*N0], const RR_t B[2*N0][2*N0]);
 void FFTMulMod(CC * const c, const vec_RR a, const vec_RR b);
 void FFTMul(CC * const c, const vec_RR& a, const vec_RR& b);
 
-void InnerProduct(RR& out, const Vec<ZZX>& C, const vec_RR& a, const vec_RR& b);
-void BuildVandermondeMatrix(Vec<ZZX>& C);
-void ConjugateOfMatrix(Vec< Vec<CC_t> >& M);
-void ComplexMatrixMult(Vec<ZZX>& C, const Vec< Vec<CC_t> >& A, const Vec< Vec<CC_t> >& B);
-ZZX ShiftRight(const ZZX& a);
-ZZ Rounding(const long double& value);
+void InnerProduct(vec_RR& innerp, const vec_RR& a, const vec_RR& b);
+void Inverse(vec_RR& inverse, const vec_RR& a);
+void SquareRoot(vec_RR& sqr, const vec_RR& a);
+CC Reciprocal(const CC c);
 
 #endif

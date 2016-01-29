@@ -17,7 +17,7 @@ using std::complex;
 // N0 is the degree of the polynomial ring used. N0 must be a power of 2!
 // q0 is the modulus w.r.t. whom the integers are reduced. We suggest to take q0 prime
 //=====================================================================================
-#define N0 32
+#define N0 8
 #define q0 (1<<20)
 //#define q0 7
 //======================================================================================
@@ -83,6 +83,8 @@ const CC_t ii(0, 1);
 const CC i_v(to_RR(0), to_RR(1));
 const CC_t omega   = exp( ii*(Pi/N0));
 const CC_t omega_1 = exp(-ii*(Pi/N0));
+const CC omega_CC  = exp( ii*(Pi/N0));
+const CC omega_1_CC= exp(-ii*(Pi/N0));
 const CC omega_2   = exp( ii*(Pi/(2*N0)));
 const CC omega_inv = exp(-ii*(Pi/(2*N0)));
 

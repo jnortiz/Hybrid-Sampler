@@ -611,13 +611,13 @@ void FFTMulMod(CC * const c, const vec_RR a, const vec_RR b) {
 
     ReverseFFTStep(reverse, pq, 2*la, omega_inv, la);
     
-    cout << "reverse: ";
+//    cout << "reverse: ";
+//    
+//    cout << (2*la)/N0 << endl;
     
-    cout << (2*la)/N0 << endl;
-    
-    for(int i = 0; i < 2*la; i++)
-        cout << reverse[i] << " ";
-    cout << endl;
+//    for(int i = 0; i < 2*la; i++)
+//        cout << reverse[i] << " ";
+//    cout << endl;
     
     FastMod(c, reverse, 2*la);
     
@@ -671,9 +671,6 @@ void FastMod(vec_RR& f) {
                 f[j] += f[i*N0+j+N0];
     }//end-for
     
-//    for(i = 0; i < N0 && (i+N0) < f.length(); i++)
-//        f[i] = f[i] - f[i+N0];
-
     for(i = N0; i < f.length(); i++)
         f[i] = conv<RR>(0);
     
@@ -682,185 +679,112 @@ void FastMod(vec_RR& f) {
 }//end-FastMod()
 
 /*
- * Operations in Q[x]/<x^n+1>:
- * 
- * Addition: already provided by NTL as add(c, a, b);
- * Subtraction: already provided by NTL as sub(c, a, b);
- * Multiplication: provided by FFTMulMod();
- * Division: to be implemented.
- * 
+ * Operations in H = K^w, K = Q[x]/<x^n+1>, and K using the canonical embedding,
+ * e.g., the DFT step from FFT algorithm.
  */
 
-/* Computation of the inner product as matrix multiplication [Lyubashevsky and Prest, 2015] */
-void InnerProduct(RR& out, const Vec<ZZX>& C, const vec_RR& a, const vec_RR& b) {
-    // <a, b> = a^{T} * \bar{V^{T}} * V * b
+/* Inner product of elements in H for the case which w = 2 (NTRU case m = 2n) */
+void InnerProduct(vec_RR& innerp, const vec_RR& a, const vec_RR& b) {    
     
-    /* Important: build Vandermonde matrix first by calling 
-     * BuildVandermondeMatrix(C).
-     */
+    vec_RR a1, a2;
+    vec_RR b1, b2;
+    int i;
     
-    /* D = a^{T} * \bar{V^{T}} * V */
-    int i, j;
-    vec_RR D;
-    RR sum;
-    D.SetLength(N0);
+    a1.SetLength(2*N0); a2.SetLength(2*N0);
+    b1.SetLength(2*N0); b2.SetLength(2*N0);
     
+    /* Splitting a and b into polynomials in K */
     for(i = 0; i < N0; i++) {
-        clear(sum);
-        for(j = 0; j < N0; j++)
-            sum = sum + a[j]*to_RR(C[j][i]);
-        D[i] = sum;
-    }//end-for
+        a1[i] = a[i];
+        a2[i] = a[i+N0];
+        b1[i] = b[i];
+        b2[i] = b[i+N0];
+    }//end-for    
     
-    /* Final computation; the output is an integer. */
-    clear(sum);
+    CC *a1_FFT, *a2_FFT;
+    CC *b1_FFT, *b2_FFT;
+    a1_FFT = new CC[2*N0]; a2_FFT = new CC[2*N0];
+    b1_FFT = new CC[2*N0]; b2_FFT = new CC[2*N0];
+    
+    /* Embedding a and b into the complex */
+    FFTStep(a1_FFT, a1, 2*N0, omega_2, N0);    
+    FFTStep(a2_FFT, a2, 2*N0, omega_2, N0);
+    FFTStep(b1_FFT, b1, 2*N0, omega_2, N0);
+    FFTStep(b2_FFT, b2, 2*N0, omega_2, N0);
+
+    a1.kill(); a2.kill();
+    b1.kill(); b2.kill();
+    
+    CC sum[2*N0];
+    
+    for(i = 0; i < (2*N0); i++)
+        sum[i] = a1_FFT[i]*conj(b1_FFT[i]) + a2_FFT[i]*conj(b2_FFT[i]);
+    
+    delete[] a1_FFT; delete[] a2_FFT;
+    delete[] b1_FFT; delete[] b2_FFT;
+    
+    CC mod[N0], reverse[2*N0];
+    
+    ReverseFFTStep(reverse, sum, 2*N0, omega_inv, N0);    
+    FastMod(mod, reverse, 2*N0);
+    innerp.SetLength(N0);
+    
     for(i = 0; i < N0; i++)
-        sum += D[i]*b[i];
-    
-    out = sum;
-    
-    D.kill();
+        innerp[i] = mod[i].real();
     
 }//end-InnerProduct()
 
-/* Computation of (\bar{V^{T}} * VrootOfUnity) for the inner-product operation. */
-void BuildVandermondeMatrix(Vec<ZZX>& C) {
+/* Inversion of a(x) via canonical embedding */
+void Inverse(vec_RR& inverse, const vec_RR& a) {
     
-    /* The Vandermonde matrix computes the i-th m-th roots of unity 
-     * and their exponentiations. The vector C is the multiplication
-     * (\bar{V^{T}} * V). */
+    CC a_FFT[N0], reverse[N0];
 
-    // FYI: phi(m) = m/2 = N0
+    /* Embedding of a(x) in K into C^n */
+    FFTStep(a_FFT, a, N0, omega_CC, N0/2);
     
-    /* Construction of Valdermonde matrix V */
-    Vec< Vec<CC_t> > V;
-    int i, it = 0, j, m = 2*N0;
-    
-    V.SetLength(N0);
-    C.SetLength(N0);
-    
-    for(i = 0; i < N0; i++) {
-        V[i].SetLength(N0);
-        C[i].SetLength(N0);
-    }//end-for
-    
-    for(i = 0; i < m; i++) {        
-        if(NTL::GCD(i, m) == 1) {
-            for(j = 0; j < N0; j++)
-                V[it][j] = std::pow(omega, j); // Function std::atan is not defined for RR
-            it++;
-        }//end-if        
-    }//end-for
-    
-    Vec< Vec<CC_t> > transpV;
-    transpV.SetLength(N0);
-    
-    /* Transposition of Vandermonde matrix V */
-    for(i = 0; i < N0; i++) {
-        transpV[i].SetLength(N0);
-        for(j = 0; j < N0; j++)
-            transpV[i][j] = V[j][i];
-    }//end-for
-    
-    /* Computation of conjugate of V^{T} */
-    ConjugateOfMatrix(transpV);
-    
-    /* Integer matrix multiplication (\bar{V^{T}} * V) */
-    ZZX C_aux;
-    CC_t sum;
-    
-    C_aux.SetLength(N0);
-    
-    for (j = 0; j < N0; j++) {          
-        sum = 0.0;
-        for (i = 0; i < N0; i++)
-            sum = sum + transpV[0][i]*V[i][j];
-        C_aux[j] = Rounding(sum.real());
-    }//end-for
-    
-    
-    C[0] = C_aux;
-    C_aux.kill();
-    
-    for(i = 1; i < N0; i++)
-        C[i] = ShiftRight(C[i-1]);
-    
-    for(i = 0; i < N0; i++) {
-        V[i].kill();
-        transpV.kill();
-    }//end-for
-    
-    V.kill();
-    transpV.kill();
-
-}//end-BuildVandermondMatrix()
-
-ZZX ShiftRight(const ZZX& a) {
-    
-    ZZX output;
-    output.SetLength(N0);
-    
-    output[0] = -a[N0-1];
-    
-    for(int i = 1; i < N0; i++)
-        output[i] = a[i-1];
-    
-    return output;
-    
-}//end-ShiftRight()
-
-/* It computer the conjugate of each element in the matrix */
-void ConjugateOfMatrix(Vec< Vec<CC_t> >& M) {
-    
-    // Warning: Destructive function
-    
-    int cols, rows;
-    cols = M[0].length();
-    rows = M.length();
-    
-    for(int i = 0; i < rows; i++)
-        for(int j = 0; j < cols; j++)
-            M[i][j] = std::conj(M[i][j]);
-    
-}//end-ConjugateOfMatrix()
-
-/* Matrix multiplication of complex numbers generating an integer matrix */
-void ComplexMatrixMult(Vec<ZZX>& C, const Vec< Vec<CC_t> >& A, const Vec< Vec<CC_t> >& B) {       
-
-    int colsB, i, j, k, rowsA, rowsB;
-    
-    colsB = B[0].length();
-    rowsA = A.length();
-    rowsB = B.length();
-    
-    assert(A[0].length() == rowsB);
-
-    C.SetLength(rowsA);
-    for(i = 0; i < rowsA; i++)
-        C[i].SetLength(colsB);        
-
-    CC_t sum;
-    for (k = 0; k < rowsA; k++) {
-      for (j = 0; j < colsB; j++) {          
-          sum = 0.0;
-          for (i = 0; i < rowsB; i++)
-              sum = sum + A[k][i]*B[i][j];
-          C[k][j] = Rounding(sum.real());
-      }//end-for
-    }//end-for
+    /* Computation of reciprocals component-wise */
+    for(int i = 0; i < N0; i++)
+        a_FFT[i] = Reciprocal(a_FFT[i]);
         
-}//end-Mult()
-
-ZZ Rounding(const long double& value) {
+    /* Interpolation into K */
+    ReverseFFTStep(reverse, a_FFT, N0, omega_1_CC, N0/2);    
     
-    ZZ r;
-    float fvalue = (float)value;
-
-    if(fvalue > 0.0)
-        r = to_ZZ(conv<int>(floor(fvalue)));
-    else
-        r = to_ZZ(conv<int>(ceil(fvalue)));
-
-    return r;
+    inverse.SetLength(N0);
+    for(int i = 0; i < N0; i++)
+        inverse[i] = reverse[i].real();
     
-}//Rounding()
+}//end-Inverse()
+
+void SquareRoot(vec_RR& sqr, const vec_RR& a) {
+    
+    CC a_FFT[N0], reverse[N0];
+    
+    /* Embedding of a(x) in K into C^n */
+    FFTStep(a_FFT, a, N0, omega_CC, N0/2);
+    
+    /* Computation of square-root of each complex number */
+    for(int i = 0; i < N0; i++)
+        a_FFT[i] = std::sqrt(a_FFT[i]);
+        
+    /* Interpolation into K */
+    ReverseFFTStep(reverse, a_FFT, N0, omega_1_CC, N0/2);    
+
+    sqr.SetLength(N0);
+    for(int i = 0; i < N0; i++)
+        sqr[i] = reverse[i].real();
+    
+}//end-SquareRoot()
+
+/* Calculation of the reciprocal of a complex number c */
+CC Reciprocal(const CC c) {
+    
+    RR denom, imag, real;
+    
+    real = c.real();
+    imag = c.imag();
+    denom = (real*real+imag*imag);
+    CC reciprocal(real/denom, (-1)*(imag/denom));
+    
+    return reciprocal;
+    
+}//end-Reciprocal()
