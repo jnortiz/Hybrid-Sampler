@@ -168,75 +168,202 @@ signed int Sample4(RR_t c, RR_t sigma)
 
 /*****************************************************************************/
 
-ZZX Ring_Peikert(vec_RR& c, const vec_RR& X, RR b, RR eta, RR factor, RR v, long precision, int m, int tailcut) {
+/*
+ * For the hybrid Gaussian sampling, the calling procedures sequence is
+ * PrecomputationRingKlein(), PrecomputationRingPeikert(), and then RingKlein().
+ */
 
-    cout << "[!] Ring-Peikert Gaussian sampler status: ";
+void PrecomputationRingKlein(vec_RR& sigma_squared, mat_RR& innerp, 
+        const mat_RR& BTilde, const vec_RR& sigma) {
+
+    CC sigma_FFT[N0];
+    sigma_squared.SetLength(N0);
+    FFTMulMod(sigma_FFT, sigma, sigma);
+    int i;
+    for(i = 0; i < N0; i++)
+        sigma_squared[i] = sigma_FFT[i].real();
     
-    RR::SetPrecision(precision);
+    innerp.SetDims(N0, N0);
+    for(i = 0; i < N0; i++)
+        InnerProduct(innerp[i], BTilde[i], BTilde[i]);
+    
+}//end-PrecomputationRingKlein()
+
+vec_RR RingKlein(const mat_RR& innerp, const mat_RR& B, const mat_RR& BTilde, 
+        const mat_RR& b, const vec_RR& X, const vec_RR& sigma_squared, 
+        const vec_RR& c, const RR& sigma0, const RR& eta, const RR& v, 
+        const long precision) {
         
-    vec_RR p, x;
-    ZZX z;    
-    int n = c.length();    
+    cout << "[!] Ring_Klein status: " << endl;
     
-    x.SetLength(n);   
-    for(int i = 0; i < x.length(); i++)
-        x[i] = Ziggurat(X, m, factor, precision, v);
+    vec_RR center;
+    center = c; // 2N0-length
     
-    p.SetLength(n);
-    mul(p, x, b);
-    x.kill();
-    add(c, c, p);
-    p.kill();
+    vec_RR V;
+    V.SetLength(2*N0);
     
-    Vec< Vec<int> > P;   
-    Vec<int> begin;
-
-    z.SetLength(n);
+    CC mult[N0];
+    vec_RR d_i, inverse, num, sigma_i, H_mul;
+    vec_RR R_sample;
+    d_i.SetLength(N0);
+    sigma_i.SetLength(N0);
     
-    for(int i = 0; i < n; i++) {
-        BuildProbabilityMatrix(P, begin, precision, tailcut, eta, c[i]);
-        z[i] = to_ZZ(KnuthYao(P, begin, tailcut, eta, c[i]));               
+    int j;
+    for(int i = N0-1; i >= 0; i--) {
+        
+        InnerProduct(num, center, BTilde[i]);
+        
+        Inverse(inverse, innerp[i]);
+        
+        FFTMulMod(mult, num, inverse);
+        for(j = 0; j < N0; j++)
+            d_i[j] = mult[j].real();
+        
+        FFTMulMod(mult, sigma_squared, inverse);
+        for(j = 0; j < N0; j++)
+            sigma_i[j] = mult[j].real();
+        
+        R_sample = RingPeikert(b[i], d_i, X, v, eta, sigma0, precision);
+        
+        KByHMultiplication(H_mul, R_sample, B[i]);
+        
+        for(j = 0; j < (2*N0); j++) {
+            center[j] = center[j] - H_mul[j];
+            V[j] = V[j] + H_mul[j];
+        }//end-for
     }//end-for
-
+    
     cout << "Pass!" << endl;
     
-    P.kill();
-    begin.kill();
+    return V;
     
-    return z;
-    
-}//end-OfflineRingPeikert()
+}//end-RingKlein()
 
-void OfflineRingPeikert(const RR sigma0, const vec_RR sigma, const mat_RR BTilde) {
+vec_RR RingPeikert(const vec_RR& b, const vec_RR c, const vec_RR& X, const RR v, 
+              const RR eta, const RR sigma0, const long precision) {
 
-    cout << "\n[!] Offline phase of Ring-Peikert status: ";
+    cout << "[!] Ring_Peikert status: ";
     
-    // Constants
+    vec_RR cont_poly;
+    cont_poly.SetLength(N0);
+    int i;
+    for(i = 0; i < N0; i++)
+        cont_poly[i] = Ziggurat(X, (int)64, sigma0, precision, v);
+
+    /* Step 1: sampling from \bar K */
+    CC p_FFT[N0];    
+    FFTMulMod(p_FFT, b, cont_poly);
+
+    Vec< Vec<int> > P;
+    Vec<int> begin;
+
+    vec_RR center;
+    center.SetLength(N0);
+    
+    for(i = 0; i < N0; i++)
+        center[i] = c[i] + p_FFT[i].real();
+    
+    RR sigma = sigma0*eta;
+    vec_RR output;
+    output.SetLength(N0);
+    
+    /* Step 2: sampling from ring R */
+    for(i = 0; i < N0; i++) {
+        BuildProbabilityMatrix(P, begin, precision, 13, sigma, center[i]);
+        output[i] = to_RR(KnuthYao(P, begin, 13, sigma, center[i]));        
+    }//end-for    
+    
+    cout << "Pass!" << endl;
+
+    return output;
+    
+}//end-RingPeikert()
+
+void PrecomputationRingPeikert(mat_RR& b, vec_RR& X, RR& v, RR& eta, 
+        const mat_RR& innerp, const vec_RR& sigma_squared, 
+        const RR sigma0, const long precision, const RR tailcut) {
+
+    cout << "[!] Precomputation phase of Ring_Peikert sampler status: ";
+    
+    /**
+     * @param BTilde - Gram-Schmidt orthogonalization of short basis B. 2N0 times 2N0 matrix;
+     * @param sigma - Standard deviation of Ring_Klein sampler;
+     */
+    
+    /* Calculus of sigma_0 times \eta */
     vec_RR sigmaEta;
-    sigmaEta.SetLength(N0);    
-    RR epsilon, eta, overPi, overTwo;
+    sigmaEta.SetLength(N0);
+    RR epsilon, overPi, overTwo;
     div(overPi, 1, ComputePi_RR());
     div(overTwo, to_RR(1), to_RR(2));
     div(epsilon, to_RR(1), to_RR(4)); // \epsilon \in (0, 1/2)
     eta = overPi*sqrt(overTwo*(log(2*N0*(1+1/epsilon)))); // See Lemma 3 from (Ducas and Prest, 2015).
-    mul(sigmaEta[0], sigma0, eta);
-    
-    cout << "sigmaEta: " << sigmaEta << endl;
-        
-    // Standard deviation \sigma squared
-    CC *sigmaSquared = new CC[N0];    
-    FFTMulMod(sigmaSquared, sigma, sigma);
-    vec_RR sigmaSquaredRR;
-    sigmaSquaredRR.SetLength(N0);
-    for(int i = 0; i < N0; i++)
-        sigmaSquaredRR[i] = sigmaSquared[i].real();
-    delete[] sigmaSquared;
+    mul(sigmaEta[0], sigma0, eta);    
 
-    cout << "sigma: " << sigma << endl << "sigmaSquaredRR: " << sigmaSquaredRR << endl;
-        
+    /* Embedding of sigmaEta in K into C^n */
+    CC sigmaEta_FFT[N0];    
+    FFTStep(sigmaEta_FFT, sigmaEta, N0, omega_CC, N0/2);
+    sigmaEta.kill();
+    
+    /* Embedding of \sigma^2 in K into C^n */
+    CC sigma_FFT[N0];
+    FFTStep(sigma_FFT, sigma_squared, N0, omega_CC, N0/2);
+    
+    /* Computation of parameter b for all \tilde b_i in the Gram-Schmidt basis */
+    b.SetDims(N0, N0);    
+    CC b_FFT[N0], BTilde_FFT[N0];    
+    int j;
+    
+    for(int i = 0; i < N0; i++) {        
+        FFTStep(BTilde_FFT, innerp[i], N0, omega_CC, N0/2);        
+        for(j = 0; j < N0; j++)
+            b_FFT[j] = sqrt(sigmaEta_FFT[j] - sigma_FFT[j]*Reciprocal(BTilde_FFT[j]));
+        ReverseFFTStep(BTilde_FFT, b_FFT, N0, omega_1_CC, N0/2); // Reusing BTilde variable
+        for(j = 0; j < N0; j++)
+            b[i][j] = BTilde_FFT[j].real();        
+    }//end-for
+    
+    v = ZCreatePartition(X, (int)64, sigma0, precision, tailcut);    
+    
     cout << "Pass!" << endl;
     
-}//end-OfflineRingPeikert()
+}//end-PrecomputationRingPeikert()   
+
+void KByHMultiplication(vec_RR& output, const vec_RR& a, const vec_RR& b) {
+    /**
+     * 
+     * @param output - in H = K^m
+     * @param a - in K
+     * @param b - in H
+     */
+    
+//    cout << "[!] KByHMultiplication status: ";
+    
+    vec_RR b1, b2;
+    b1.SetLength(N0);
+    b2.SetLength(N0);
+    
+    int i;
+    for(i = 0; i < N0; i++) {
+        b1[i] = b[i];
+        b2[i] = b[i+N0];
+    }//end-for
+    
+    CC mult1[N0], mult2[N0];
+    FFTMulMod(mult1, a, b1);
+    FFTMulMod(mult2, a, b2);
+    
+    output.SetLength(2*N0);
+    for(i = 0; i < N0; i++) {
+        output[i] = mult1[i].real();
+        output[i+N0] = mult2[i].real();
+    }//end-for
+    
+//    cout << "Pass!" << endl;
+    
+}//KByHMultiplication
+
+/*****************************************************************************/
 
 // Gram-Schmidt orthogonalization procedure for block isometric basis
 void BlockGSO(mat_RR& BTilde, const mat_RR& B, int n, int precision) {

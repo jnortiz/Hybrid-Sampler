@@ -17,7 +17,7 @@ using std::complex;
 // N0 is the degree of the polynomial ring used. N0 must be a power of 2!
 // q0 is the modulus w.r.t. whom the integers are reduced. We suggest to take q0 prime
 //=====================================================================================
-#define N0 8
+#define N0 512
 #define q0 (1<<20)
 //#define q0 7
 //======================================================================================
@@ -42,16 +42,11 @@ typedef struct
     RR_t Bstar[2*N0][2*N0];
 } MSK_Data;
 
-
 typedef struct
 {
     ZZ_pX h;
     CC_t h_FFT[N0];
 } MPK_Data;
-
-
-
-
 
 //==============================================================================
 //          Seed for the RNG    
@@ -70,8 +65,6 @@ extern __inline__ uint64_t rdtsc(void) {
   return (d<<32) | a;
 }
 #endif
-
-
 
 // Useful constants up to ~500 bits
 const long double sigma_1= 0.84932180028801904272150283410288961971514109378435394286159953238339383120795466719298223538163406787061691601172910413284884326532697308797136114023L;//sqrt(1/(2*log(2)))

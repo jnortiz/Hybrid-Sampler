@@ -70,12 +70,12 @@ int main() {
     
     cout << "[!] KeyGen average running time for " << n_iterations << " iterations: " << (float)(average/((float)(n_iterations)*1000000000.0)) << " s." << endl;           
 
-    int function_id = 4;
+    int function_id = 1;
     
     switch(function_id) {
         case 1: {
             /*
-             * Ring_Klein Gaussian sampler 
+             * Hybrid Gaussian sampler 
              */            
             
             mat_RR B;
@@ -167,19 +167,70 @@ int main() {
             }//end-for
         #endif            
             
-//            vec_RR sigma;
-//            sigma.SetLength(N0);
-//            
-//            for(i = 0; i < N0; i++)
-//                sigma[i] = RandomBnd(sqrt(q0));
-//            
-//            RR sigma0 = to_RR(3.145);
-//            
-//            OfflineRingPeikert(sigma0, sigma, Block_BTilde);
-//
-//            sigma.kill();            
+            long precision = 107;
+            RR::SetPrecision(precision);
+            
+            mat_RR innerp;
+            vec_RR sigma, sigma_squared;
+            sigma.SetLength(N0);
+            long int sqr = (long int)sqrt(q0);
+            
+            for(i = 0; i < N0; i++)
+                sigma[i] = RandomBnd(sqr);
+                        
+            ts_start = get_timestamp();
+            PrecomputationRingKlein(sigma_squared, innerp, Block_BTilde, sigma);
+            ts_end = get_timestamp();
+            
+            average = (ts_end - ts_start);
+
+            cout << "[!] Precomputation phase of Ring_Klein sampler running time: " << (float)(average/1000000000.0) << " s." << endl;      
+            
+            mat_RR b;
+            vec_RR X;
+            RR eta, v, sigma0, tailcut;
+            sigma0 = to_RR(3.195);
+            tailcut = to_RR(13);
+            
+            ts_start = get_timestamp();
+            PrecomputationRingPeikert(b, X, v, eta, innerp, sigma_squared, sigma0, 
+                    precision, tailcut);
+            ts_end = get_timestamp();
+
+            average = (ts_end - ts_start);
+
+            cout << "[!] Precomputation phase of Ring_Peikert sampler running time: " << (float)(average/1000000000.0) << " s." << endl;      
+            
+            vec_RR c, sample;
+
+            /* Center */
+            c.SetLength(2*N0);
+            for(i = 0; i < 2*N0; i++)
+                c[i] = RandomBnd(sqr);
+            
+            ts_start = get_timestamp();
+            sample = RingKlein(innerp, B, Block_BTilde, b, X, sigma_squared, c, 
+                    sigma0, eta, v, precision);
+            ts_end = get_timestamp();
+
+            average = (ts_end - ts_start);
+
+            cout << "[!] Hybrid Gaussian sampler running time: " << (float)(average/1000000000.0) << " s." << endl;      
+            cout << "[>] Sample from lattice: " << sample << endl;
+            
+#ifdef PRINT_ALL            
+            cout << "\n[>] Parameter b for all i: " << endl;
+            for(i = 0; i < N0; i++)
+                cout << b[i] << endl;
+            cout << endl;
+#endif
+            
             B.kill();
+            innerp.kill();
+            sigma.kill(); sigma_squared.kill();
+            b.kill(); X.kill();
             Block_BTilde.kill();
+            sample.kill();
 
             break;
         }//end-case-1

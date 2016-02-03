@@ -1,6 +1,7 @@
 #ifndef LIBE_ALGEBRA_H
 #define LIBE_ALGEBRA_H
 
+#include <NTL/mat_RR.h>
 #include <NTL/vec_RR.h>
 #include "params.h"
 

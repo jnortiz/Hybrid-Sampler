@@ -6,6 +6,8 @@
 #include <NTL/matrix.h>
 
 #include "params.h"
+#include "FFT.h"
+
 
 /* Sampling algorithms of Thomas Prest */
 unsigned int Sample0(unsigned long alea);
@@ -24,10 +26,20 @@ void rot(mat_RR& out, const vec_RR& b, int n);
 RR NormOfBasis(const mat_RR& B);
 vec_RR Isometry(const vec_RR& b);
 
+/* Ring-Klein for Gaussian sampling over lattices */
+void PrecomputationRingKlein(vec_RR& sigma_squared, mat_RR& innerp, 
+        const mat_RR& BTilde, const vec_RR& sigma);
+vec_RR RingKlein(const mat_RR& innerp, const mat_RR& B, const mat_RR& BTilde, 
+        const mat_RR& b, const vec_RR& X, const vec_RR& sigma_squared, 
+        const vec_RR& c, const RR& sigma0, const RR& eta, const RR& v, const long precision);
+
 /* Ring-Peikert for sampling from the ring R = Z[x]/<x^n + 1>*/
-ZZX Ring_Klein(const mat_RR& B, const mat_RR& BTilde, const vec_RR& Sigma, const vec_RR& Center);
-ZZX Ring_Peikert(vec_RR& c, const vec_RR& X, RR b, RR eta, RR factor, RR v, long precision, int m, int tailcut);
-void OfflineRingPeikert(const RR sigma0, const vec_RR sigma, const mat_RR BTilde);
+void PrecomputationRingPeikert(mat_RR& b, vec_RR& X, RR& v, RR& eta, 
+        const mat_RR& innerp, const vec_RR& sigma_squared, 
+        const RR sigma0, const long precision, const RR tailcut);
+vec_RR RingPeikert(const vec_RR& b, const vec_RR c, const vec_RR& X, const RR v, 
+              const RR eta, const RR sigma0, const long precision);
+void KByHMultiplication(vec_RR& output, const vec_RR& a, const vec_RR& b);
 
 /* Continuous Gaussian sampling */
 RR Ziggurat(const vec_RR& X, int m, RR sigma, long precision, RR v);

@@ -755,6 +755,25 @@ void Inverse(vec_RR& inverse, const vec_RR& a) {
     
 }//end-Inverse()
 
+void InverseAndSquareRoot(vec_RR& inverse, const vec_RR& a) {
+    
+    CC a_FFT[N0], reverse[N0];
+
+    /* Embedding of a(x) in K into C^n */
+    FFTStep(a_FFT, a, N0, omega_CC, N0/2);
+    
+    for(int i = 0; i < N0; i++)
+        a_FFT[i] = std::sqrt(Reciprocal(a_FFT[i]));
+        
+    /* Interpolation into K */
+    ReverseFFTStep(reverse, a_FFT, N0, omega_1_CC, N0/2);    
+    
+    inverse.SetLength(N0);
+    for(int i = 0; i < N0; i++)
+        inverse[i] = reverse[i].real();
+    
+}//end-Inverse()
+
 void SquareRoot(vec_RR& sqr, const vec_RR& a) {
     
     CC a_FFT[N0], reverse[N0];
