@@ -8,7 +8,6 @@
 #include "params.h"
 #include "FFT.h"
 
-
 /* Sampling algorithms of Thomas Prest */
 unsigned int Sample0(unsigned long alea);
 unsigned int Sample1(const unsigned int k);
@@ -28,7 +27,7 @@ vec_RR Isometry(const vec_RR& b);
 
 /* Ring-Klein for Gaussian sampling over lattices */
 void PrecomputationRingKlein(vec_RR& sigma_squared, mat_RR& innerp, 
-        const mat_RR& BTilde, const vec_RR& sigma);
+        const mat_RR& BTilde, const ZZX& f, const ZZX& g);
 vec_RR RingKlein(const mat_RR& innerp, const mat_RR& B, const mat_RR& BTilde, 
         const mat_RR& b, const vec_RR& X, const vec_RR& sigma_squared, 
         const vec_RR& c, const RR& sigma0, const RR& eta, const RR& v, const long precision);

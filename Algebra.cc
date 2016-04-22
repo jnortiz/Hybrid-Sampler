@@ -598,7 +598,7 @@ void FFTMulMod(CC * const c, const vec_RR a, const vec_RR b) {
      */
     FFTStep(a_FFT, aux_a, 2*la, omega_2, la);
     FFTStep(b_FFT, aux_b, 2*la, omega_2, la);    
-        
+    
     aux_a.kill();
     aux_b.kill();
 

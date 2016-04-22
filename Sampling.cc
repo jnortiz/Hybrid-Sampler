@@ -15,8 +15,6 @@
 using namespace std;
 using namespace NTL;
 
-
-
 //==============================================================================
 // Takes in input a random value and samples from distribution D_{\sigma_2}^+,   
 // Samples an element in Z+ with probability proportionnal to 2^{-x^2}       
@@ -174,15 +172,57 @@ signed int Sample4(RR_t c, RR_t sigma)
  */
 
 void PrecomputationRingKlein(vec_RR& sigma_squared, mat_RR& innerp, 
-        const mat_RR& BTilde, const vec_RR& sigma) {
+        const mat_RR& BTilde, const ZZX& f, const ZZX& g) {
 
-    CC sigma_FFT[N0];
-    sigma_squared.SetLength(N0);
-    FFTMulMod(sigma_FFT, sigma, sigma);
-    int i;
-    for(i = 0; i < N0; i++)
-        sigma_squared[i] = sigma_FFT[i].real();
+    vec_RR f_RR, g_RR;
+    f_RR.SetLength(N0); g_RR.SetLength(N0);
     
+    int i;
+    for(i = 0; i < N0; i++) {
+        f_RR[i] = to_RR(f[i]);
+        g_RR[i] = to_RR(g[i]);
+    }//end-for
+    
+    CC f_FFT[N0], g_FFT[N0];    
+    FFTStep(f_FFT, f_RR, N0, omega_CC, N0/2);
+    FFTStep(g_FFT, g_RR, N0, omega_CC, N0/2);
+    
+    CC abs_f, abs_g;
+    RR D_omega, over_D, q_RR, norm;
+    q_RR = to_RR(q0);
+    
+    abs_f = abs(f_FFT[0]);
+    abs_g = abs(g_FFT[0]);
+    D_omega = sqrt(abs_f*abs_f + abs_g*abs_g).real();
+    over_D = q_RR/D_omega;
+    
+    if((D_omega - over_D) > 0.0)
+        norm = D_omega;
+    else
+        norm = over_D;
+    
+    for(i = 1; i < N0; i++) {        
+        abs_f = abs(f_FFT[i]);
+        abs_g = abs(g_FFT[i]);
+        D_omega = sqrt(abs_f*abs_f + abs_g*abs_g).real();
+        over_D = q_RR/D_omega;
+
+        if((D_omega - norm) > 0.0)
+            norm = D_omega;
+        else
+            if((over_D - norm) > 0.0)
+                norm = over_D;
+        
+    }//end-for
+    
+    RR epsilon, eta, overPi, overTwo;
+    div(overPi, 1, ComputePi_RR());
+    div(overTwo, to_RR(1), to_RR(2));
+    div(epsilon, to_RR(1), to_RR(4)); // \epsilon \in (0, 1/2)
+    eta = overPi*sqrt(overTwo*(log(2*N0*(1+1/epsilon)))); // See Lemma 3 from (Ducas and Prest, 2015).
+    sigma_squared.SetLength(N0);
+    sigma_squared[0] = (norm*eta)*(norm*eta);
+
     innerp.SetDims(N0, N0);
     for(i = 0; i < N0; i++)
         InnerProduct(innerp[i], BTilde[i], BTilde[i]);
@@ -194,7 +234,7 @@ vec_RR RingKlein(const mat_RR& innerp, const mat_RR& B, const mat_RR& BTilde,
         const vec_RR& c, const RR& sigma0, const RR& eta, const RR& v, 
         const long precision) {
         
-    cout << "[!] Ring_Klein status: " << endl;
+    cout << "[!] Hybrid Gaussian sampler status: ";
     
     vec_RR center;
     center = c; // 2N0-length
@@ -231,6 +271,7 @@ vec_RR RingKlein(const mat_RR& innerp, const mat_RR& B, const mat_RR& BTilde,
             center[j] = center[j] - H_mul[j];
             V[j] = V[j] + H_mul[j];
         }//end-for
+        
     }//end-for
     
     cout << "Pass!" << endl;
@@ -242,7 +283,7 @@ vec_RR RingKlein(const mat_RR& innerp, const mat_RR& B, const mat_RR& BTilde,
 vec_RR RingPeikert(const vec_RR& b, const vec_RR c, const vec_RR& X, const RR v, 
               const RR eta, const RR sigma0, const long precision) {
 
-    cout << "[!] Ring_Peikert status: ";
+//    cout << "[!] Ring_Peikert status: ";
     
     vec_RR cont_poly;
     cont_poly.SetLength(N0);
@@ -263,17 +304,18 @@ vec_RR RingPeikert(const vec_RR& b, const vec_RR c, const vec_RR& X, const RR v,
     for(i = 0; i < N0; i++)
         center[i] = c[i] + p_FFT[i].real();
     
-    RR sigma = sigma0*eta;
+    RR sigma = sqrt(sigma0)*eta;
     vec_RR output;
     output.SetLength(N0);
     
+    BuildProbabilityMatrix(P, begin, precision, 13, sigma, to_RR(0));
+    
     /* Step 2: sampling from ring R */
     for(i = 0; i < N0; i++) {
-        BuildProbabilityMatrix(P, begin, precision, 13, sigma, center[i]);
-        output[i] = to_RR(KnuthYao(P, begin, 13, sigma, center[i]));        
+        output[i] = to_RR(KnuthYao(P, begin, 13, sigma, to_RR(0))) + center[i];        
     }//end-for    
     
-    cout << "Pass!" << endl;
+//    cout << "Pass!" << endl;
 
     return output;
     
@@ -283,7 +325,7 @@ void PrecomputationRingPeikert(mat_RR& b, vec_RR& X, RR& v, RR& eta,
         const mat_RR& innerp, const vec_RR& sigma_squared, 
         const RR sigma0, const long precision, const RR tailcut) {
 
-    cout << "[!] Precomputation phase of Ring_Peikert sampler status: ";
+//    cout << "[!] Precomputation phase of Ring_Peikert sampler status: ";
     
     /**
      * @param BTilde - Gram-Schmidt orthogonalization of short basis B. 2N0 times 2N0 matrix;
@@ -325,7 +367,7 @@ void PrecomputationRingPeikert(mat_RR& b, vec_RR& X, RR& v, RR& eta,
     
     v = ZCreatePartition(X, (int)64, sigma0, precision, tailcut);    
     
-    cout << "Pass!" << endl;
+//    cout << "Pass!" << endl;
     
 }//end-PrecomputationRingPeikert()   
 
